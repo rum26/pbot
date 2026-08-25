@@ -204,12 +204,12 @@ def answer_data(chat_id, operator_name, roll, plate):
 @bot.message_handler(commands=['test'])
 def test_buttons(message):
     kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("Пластина 9", callback_data="plate:ПЦ013:9"))
+    kb.add(types.InlineKeyboardButton("Пластина 9", callback_data="p:9"))
     bot.send_message(message.chat.id, "Выбери пластину", reply_markup=kb)
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def debug_callback(call):
-    print("DEBUG CALLBACK")
-    print(call)
+    print("DEBUG CALLBACK:", call.data)
     bot.answer_callback_query(call.id, "ok")
+    bot.send_message(call.message.chat.id, f"Нажато: {call.data}")
