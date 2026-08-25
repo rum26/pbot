@@ -1,12 +1,13 @@
 import hmac
 import os
 
+from datetime import datetime
 from flask import Flask, abort, request
 import telebot
 from telebot import types
 import json
 
-from config import TOKEN, SECRET, OPERATORS
+from config import TOKEN, SECRET, OPERATORS, VALID_PLATES
 
 
 if not os.path.exists('data.json'):
@@ -40,6 +41,31 @@ def get_operator_name(user_id: int):
     return OPERATORS.get(user_id)
 
 
+def get_events():
+    """
+    История
+    """
+    cnt = 0
+    text = f'*История*\n```'
+    for event_date, event_time, name, roll, plate, now_value in reversed(Data["events"]):
+        if cnt > 10:
+            break
+        text += f'`{event_date} {roll} {int(plate):02} ({now_value:02}) {name}`\n'
+        cnt += 1
+    text += '```'
+    return text
+
+
+def get_plates():
+    """
+    Просто количество пластин которые остались
+    """
+    text_plates = '*Пластины:*\n'
+    for i in Data["storage"]:
+        text_plates += f'`{int(i):02} . . . . {Data["storage"][i]:02} шт.`\n'
+    return text_plates
+
+
 @app.get("/healthz")
 def healthz():
     return {"ok": True}, 200
@@ -62,13 +88,86 @@ def telegram_webhook():
 
 @bot.message_handler(commands=["start"])
 def start_handler(message):
-    bot.reply_to(message, "Привет! Отправь ping")
+    user_id = message.from_user.id
+    bot.send_message(chat_id=message.chat.id,
+                     text=f"Обратитесь к администратору\n"
+                          f"telegram ID: `{user_id}`",
+                     parse_mode="MarkdownV2")
 
 
 @bot.message_handler(func=lambda message: bool(message.text))
 def text_handler(message):
-    print(message.from_user.id)
+    user_id = message.from_user.id
+    operator_name = get_operator_name(user_id)
     text = message.text.strip().lower()
 
-    if text == "ping":
-        bot.send_message(message.chat.id, "pong")
+    print(f'{operator_name} | {user_id} | {text}')
+    if not operator_name:
+        bot.send_message(chat_id=message.chat.id,
+                         text=f"Обратитесь к администратору\n"
+                              f"telegram ID: `{user_id}`",
+                         parse_mode="MarkdownV2")
+        return
+    if 'ПЦ' in text or 'ТРИО' in text:
+        try:
+            roll, plate = text.split()
+        except ValueError:
+            bot.send_message(chat_id=message.chat.id,
+                             text="⚠️ Должно быть: ПЦ013 (Вал) 9 (пластина)")
+            return
+        if plate not in VALID_PLATES:
+            bot.send_message(chat_id=message.chat.id,
+                             text=f"⚠️ Такой пластины нет: {plate}")
+            return
+        old_value = Data["storage"][plate]
+        now_value = old_value - 1
+        Data["storage"][plate] = now_value
+        event_time = datetime.now().strftime("%H:%M")
+        event_date = datetime.now().strftime("%d.%m.%y")
+        print(f'{event_date} | {operator_name} | {roll} | {plate} | {now_value}')
+        Data["events"].append([event_date, event_time, operator_name, roll, plate, now_value])
+        save_json()
+        bot.send_message(chat_id=message.chat.id,
+                         text=f"✅ Пластин ⌀{plate} осталось: {now_value} шт.")
+        return
+    elif text.startswith('add '):
+        parts = text.split()
+        if len(parts) != 3:
+            bot.send_message(chat_id=message.chat.id,
+                             text="⚠️ Формат: add 9 5")
+            return
+
+        _, plate, count_text = parts
+        if plate not in VALID_PLATES:
+            bot.send_message(chat_id=message.chat.id,
+                             text=f"⚠️ Такой пластины нет: {plate}")
+            return
+        try:
+            count = int(count_text)
+        except Exception as ex:
+            print(ex)
+            bot.send_message(chat_id=message.chat.id,
+                             text=f"⚠️ Не правильное количество!")
+            return
+        old_value = Data["storage"][plate]
+        now_value = old_value + count
+        Data["storage"][plate] = now_value
+        event_time = datetime.now().strftime("%H:%M")
+        event_date = datetime.now().strftime("%d.%m.%y")
+        Data["events"].append([event_date, event_time, operator_name, f'Пришли {count} шт.', plate, now_value])
+        save_json()
+        bot.send_message(chat_id=message.chat.id,
+                         text=f"✅ {operator_name} добавил {plate} теперь их {now_value} шт.")
+        return
+
+    elif text.startswith('hi'):
+        text_history = get_events()
+        bot.send_message(chat_id=message.chat.id,
+                         text=text_history,
+                         parse_mode="MarkdownV2")
+
+    elif text.startswith('*'):
+        text_plates = get_plates()
+        bot.send_message(chat_id=message.chat.id,
+                         text=text_plates,
+                         parse_mode="MarkdownV2")
