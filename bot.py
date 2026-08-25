@@ -8,6 +8,7 @@ from telebot import types
 import json
 
 from config import TOKEN, SECRET, OPERATORS, VALID_PLATES
+# from budget import bg
 
 
 if not os.path.exists('data.json'):
@@ -32,7 +33,7 @@ bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
 
 
-def save_json():
+def save_data():
     with open('data.json', 'w', encoding="utf-8") as f:
         json.dump(Data, f, ensure_ascii=False)
 
@@ -48,7 +49,7 @@ def get_events():
     cnt = 0
     text = f'*История*\n```'
     for event_date, event_time, name, roll, plate, now_value in reversed(Data["events"]):
-        if cnt > 10:
+        if cnt >= 10:
             break
         text += f'`{event_date} {roll} {int(plate):02} ({now_value:02}) {name}`\n'
         cnt += 1
@@ -64,6 +65,20 @@ def get_plates():
     for i in Data["storage"]:
         text_plates += f'`{int(i):02} . . . . {Data["storage"][i]:02} шт.`\n'
     return text_plates
+
+
+# # # #
+
+def get_keyboard(roll: str):
+    kb = types.InlineKeyboardMarkup(row_width=2)
+    buttons = [
+        types.InlineKeyboardButton(text=plate, callback_data=f"plate:{roll}:{plate}")
+        for plate in VALID_PLATES
+    ]
+    kb.add(*buttons)
+    return kb
+
+# # # #
 
 
 @app.get("/healthz")
@@ -99,7 +114,7 @@ def start_handler(message):
 def text_handler(message):
     user_id = message.from_user.id
     operator_name = get_operator_name(user_id)
-    text = message.text.strip().lower()
+    text = message.text.strip()
 
     print(f'{operator_name} | {user_id} | {text}')
     if not operator_name:
@@ -126,7 +141,7 @@ def text_handler(message):
         event_date = datetime.now().strftime("%d.%m.%y")
         print(f'{event_date} | {operator_name} | {roll} | {plate} | {now_value}')
         Data["events"].append([event_date, event_time, operator_name, roll, plate, now_value])
-        save_json()
+        save_data()
         bot.send_message(chat_id=message.chat.id,
                          text=f"✅ Пластин ⌀{plate} осталось: {now_value} шт.")
         return
@@ -155,19 +170,41 @@ def text_handler(message):
         event_time = datetime.now().strftime("%H:%M")
         event_date = datetime.now().strftime("%d.%m.%y")
         Data["events"].append([event_date, event_time, operator_name, f'Пришли {count} шт.', plate, now_value])
-        save_json()
+        save_data()
         bot.send_message(chat_id=message.chat.id,
                          text=f"✅ {operator_name} добавил {plate} теперь их {now_value} шт.")
         return
 
-    elif text.startswith('hi'):
-        text_history = get_events()
-        bot.send_message(chat_id=message.chat.id,
-                         text=text_history,
-                         parse_mode="MarkdownV2")
-
-    elif text.startswith('*'):
+    elif text == '*':
         text_plates = get_plates()
         bot.send_message(chat_id=message.chat.id,
                          text=text_plates,
                          parse_mode="MarkdownV2")
+        return
+    elif text == '**':
+        text_history = get_events()
+        bot.send_message(chat_id=message.chat.id,
+                         text=text_history,
+                         parse_mode="MarkdownV2")
+        return
+
+    else:
+        bot.send_message(
+            message.chat.id,
+            f"Какая пластина?",
+            reply_markup=get_keyboard('ПЦ017')
+            )
+
+
+def answer_data(chat_id, operator_name, roll, plate):
+    print(chat_id, f"✅ {operator_name} | {roll} ⌀{plate}")
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("plate:"))
+def handle_plate_callback(call):
+    _, roll, plate = call.data.split(":")
+    user_id = call.from_user.id
+    operator_name = get_operator_name(user_id)
+
+    answer_data(call.message.chat.id, operator_name, roll, plate)
+    bot.answer_callback_query(call.id, f"Выбрана пластина {plate}")

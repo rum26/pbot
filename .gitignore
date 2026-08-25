@@ -219,3 +219,5 @@ __marimo__/
 
 config.py
 data.json
+budget.json
+budget.py
