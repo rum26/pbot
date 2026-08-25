@@ -191,9 +191,10 @@ def text_handler(message):
     else:
         bot.send_message(
             message.chat.id,
-            f"Какая пластина?",
+            f"Какая пластина для ПЦ017?",
             reply_markup=get_keyboard('ПЦ017')
             )
+        return
 
 
 def answer_data(chat_id, operator_name, roll, plate):
@@ -202,9 +203,11 @@ def answer_data(chat_id, operator_name, roll, plate):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("plate:"))
 def handle_plate_callback(call):
+    print(call.data)
     _, roll, plate = call.data.split(":")
     user_id = call.from_user.id
     operator_name = get_operator_name(user_id)
+    print(operator_name, user_id, roll, plate)
 
     answer_data(call.message.chat.id, operator_name, roll, plate)
     bot.answer_callback_query(call.id, f"Выбрана пластина {plate}")
