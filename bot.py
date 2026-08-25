@@ -8,7 +8,6 @@ from telebot import types
 import json
 
 from config import TOKEN, SECRET, OPERATORS, VALID_PLATES
-# from budget import bg
 
 
 if not os.path.exists('data.json'):
@@ -187,29 +186,3 @@ def text_handler(message):
                          text=text_history,
                          parse_mode="MarkdownV2")
         return
-
-    else:
-        bot.send_message(
-            message.chat.id,
-            f"Какая пластина для ПЦ017?",
-            reply_markup=get_keyboard('ПЦ017')
-            )
-        return
-
-
-def answer_data(chat_id, operator_name, roll, plate):
-    print(chat_id, f"✅ {operator_name} | {roll} ⌀{plate}")
-
-
-@bot.message_handler(commands=['test'])
-def test_buttons(message):
-    kb = types.InlineKeyboardMarkup()
-    kb.add(types.InlineKeyboardButton("Пластина 9", callback_data="p:9"))
-    bot.send_message(message.chat.id, "Выбери пластину", reply_markup=kb)
-
-
-@bot.callback_query_handler(func=lambda call: True)
-def debug_callback(call):
-    print("DEBUG CALLBACK:", call.data)
-    bot.answer_callback_query(call.id, "ok")
-    bot.send_message(call.message.chat.id, f"Нажато: {call.data}")
