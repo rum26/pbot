@@ -67,7 +67,7 @@ def start_handler(message):
 
 @bot.message_handler(func=lambda message: bool(message.text))
 def text_handler(message):
-    print(message)
+    print(message.from_user.id)
     text = message.text.strip().lower()
 
     if text == "ping":
