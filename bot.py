@@ -209,10 +209,7 @@ def test_buttons(message):
 
 
 @bot.callback_query_handler(func=lambda call: True)
-def handle_callback(call):
-    print("CALLBACK:", call.data)
-    bot.answer_callback_query(call.id, "Нажатие получено")
-
-    if call.data.startswith("plate:"):
-        _, roll, plate = call.data.split(":")
-        bot.send_message(call.message.chat.id, f"roll={roll}, plate={plate}")
+def debug_callback(call):
+    print("DEBUG CALLBACK")
+    print(call)
+    bot.answer_callback_query(call.id, "ok")
