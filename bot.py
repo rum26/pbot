@@ -201,19 +201,18 @@ def answer_data(chat_id, operator_name, roll, plate):
     print(chat_id, f"✅ {operator_name} | {roll} ⌀{plate}")
 
 
+@bot.message_handler(commands=['test'])
+def test_buttons(message):
+    kb = types.InlineKeyboardMarkup()
+    kb.add(types.InlineKeyboardButton("Пластина 9", callback_data="plate:ПЦ013:9"))
+    bot.send_message(message.chat.id, "Выбери пластину", reply_markup=kb)
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
     print("CALLBACK:", call.data)
-    bot.answer_callback_query(call.id, "ok")
+    bot.answer_callback_query(call.id, "Нажатие получено")
 
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("plate:"))
-def handle_plate_callback(call):
-    print(call.data)
-    _, roll, plate = call.data.split(":")
-    user_id = call.from_user.id
-    operator_name = get_operator_name(user_id)
-    print(operator_name, user_id, roll, plate)
-
-    answer_data(call.message.chat.id, operator_name, roll, plate)
-    bot.answer_callback_query(call.id, f"Выбрана пластина {plate}")
+    if call.data.startswith("plate:"):
+        _, roll, plate = call.data.split(":")
+        bot.send_message(call.message.chat.id, f"roll={roll}, plate={plate}")
