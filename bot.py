@@ -70,7 +70,7 @@ def get_plates():
 # # # #
 
 def get_keyboard(roll: str):
-    kb = types.InlineKeyboardMarkup(row_width=2)
+    kb = types.InlineKeyboardMarkup(row_width=1)
     buttons = [
         types.InlineKeyboardButton(text=plate, callback_data=f"plate:{roll}:{plate}")
         for plate in VALID_PLATES
@@ -199,6 +199,12 @@ def text_handler(message):
 
 def answer_data(chat_id, operator_name, roll, plate):
     print(chat_id, f"✅ {operator_name} | {roll} ⌀{plate}")
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_callback(call):
+    print("CALLBACK:", call.data)
+    bot.answer_callback_query(call.id, "ok")
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("plate:"))
