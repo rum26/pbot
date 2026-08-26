@@ -4,8 +4,9 @@ import os
 from queue import Queue
 from threading import Thread
 
+from pathlib import Path
 from datetime import datetime
-from flask import Flask, abort, request, jsonify
+from flask import Flask, abort, request, jsonify, render_template
 import telebot
 from telebot import types
 import json
@@ -32,16 +33,11 @@ else:
 BOT_TOKEN = TOKEN
 WEBHOOK_SECRET = SECRET
 WEBHOOK_PATH = "/telegram/webhook"
-TELEGRAM_URL = (f"https://api.telegram.org/bot{ESB_TOKEN}/sendMessage")
-
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
-
 cache = set()
 queue = Queue()
 
-
-# # # # tg-gateway # # #
 
 def send_telegram(text, chat_id):
     try:
@@ -54,8 +50,13 @@ def send_telegram(text, chat_id):
                 "parse_mode": "HTML"
             },
             timeout=10)
-    except Exception:
-        pass
+    except requests.exceptions.Timeout as e:
+        print(f"[send_telegram: TIMEOUT] chat_id={chat_id}: {e}")
+        return
+    except Exception as e:
+        print(f"[send_telegram: UNEXPECTED ERROR] chat_id={chat_id}: {type(e).__name__}: {e}")
+        return
+    print(f"[send_telegram: OK] chat_id={chat_id}")
 
 
 def telegram_worker():
@@ -72,9 +73,6 @@ def telegram_worker():
 Thread(
     target=telegram_worker,
     daemon=True).start()
-
-
-# # # #
 
 
 def save_data():
@@ -138,6 +136,14 @@ def send():
         "success": True,
         "queued": True
     })
+
+
+@app.route("/events")
+def web_events():
+
+    events = Data["events"]
+    headers = ["Дата", "Время", "Кто", "Событие", "Ячейка", "Остаток"]
+    return render_template("events.html", events=events, headers=headers)
 
 
 @app.post(WEBHOOK_PATH)
