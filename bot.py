@@ -4,7 +4,6 @@ import os
 from queue import Queue
 from threading import Thread
 
-from pathlib import Path
 from datetime import datetime
 from flask import Flask, abort, request, jsonify, render_template
 import telebot
@@ -141,8 +140,8 @@ def send():
 @app.route("/events")
 def web_events():
 
-    events = Data["events"]
-    headers = ["Дата", "Время", "Кто", "Событие", "Ячейка", "Остаток"]
+    events = reversed(Data["events"])
+    headers = ["Дата", "Время", "Оператор", "Событие", "Пластина", "Остаток"]
     return render_template("events.html", events=events, headers=headers)
 
 
@@ -229,7 +228,7 @@ def text_handler(message):
         Data["storage"][plate] = now_value
         event_time = datetime.now().strftime("%H:%M")
         event_date = datetime.now().strftime("%d.%m.%y")
-        Data["events"].append([event_date, event_time, operator_name, f'Пришли {count} шт.', plate, now_value])
+        Data["events"].append([event_date, event_time, operator_name, f'+{count} шт.', plate, now_value])
         save_data()
         bot.send_message(chat_id=message.chat.id,
                          text=f"✅ {operator_name} добавил {plate} теперь их {now_value} шт.")
