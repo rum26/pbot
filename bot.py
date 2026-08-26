@@ -139,7 +139,6 @@ def send():
 
 @app.route("/events")
 def web_events():
-
     events = reversed(Data["events"])
     headers = ["Дата", "Время", "Оператор", "Событие", "Пластина", "Остаток"]
     return render_template("cnc.html", events=events, headers=headers)
