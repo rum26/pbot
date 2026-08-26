@@ -1,13 +1,18 @@
 import hmac
 import os
 
+from queue import Queue
+from threading import Thread
+
 from datetime import datetime
-from flask import Flask, abort, request
+from flask import Flask, abort, request, jsonify
 import telebot
 from telebot import types
 import json
+import requests
 
-from config import TOKEN, SECRET, OPERATORS, VALID_PLATES
+
+from config import TOKEN, SECRET, OPERATORS, VALID_PLATES, ESB_TOKEN
 
 
 if not os.path.exists('data.json'):
@@ -27,9 +32,48 @@ else:
 BOT_TOKEN = TOKEN
 WEBHOOK_SECRET = SECRET
 WEBHOOK_PATH = "/telegram/webhook"
+TELEGRAM_URL = (f"https://api.telegram.org/bot{ESB_TOKEN}/sendMessage")
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
+
+cache = set()
+queue = Queue()
+
+
+# # # # tg-gateway # # #
+
+def send_telegram(text, chat_id):
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={
+                "chat_id": chat_id,
+                "text": text,
+                "disable_web_page_preview": True
+            },
+            timeout=10)
+    except Exception:
+        pass
+
+
+def telegram_worker():
+    while True:
+        q = queue.get()
+        text, chat_id = q
+        try:
+            send_telegram(text, chat_id)
+        except Exception as e:
+            print(f"Worker error: {e}")
+        queue.task_done()
+
+
+Thread(
+    target=telegram_worker,
+    daemon=True).start()
+
+
+# # # #
 
 
 def save_data():
@@ -66,23 +110,33 @@ def get_plates():
     return text_plates
 
 
-# # # #
-
-def get_keyboard(roll: str):
-    kb = types.InlineKeyboardMarkup(row_width=1)
-    buttons = [
-        types.InlineKeyboardButton(text=plate, callback_data=f"plate:{roll}:{plate}")
-        for plate in VALID_PLATES
-    ]
-    kb.add(*buttons)
-    return kb
-
-# # # #
-
-
 @app.get("/healthz")
 def healthz():
     return {"ok": True}, 200
+
+
+@app.route("/send", methods=["POST"])
+def send():
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({
+            "success": False,
+            "error": "json required"
+        }), 400
+    text = data["text"]
+    event_id = data["event_id"]
+    chat_id = data["chat_id"]
+    if event_id in cache:
+        return jsonify({
+            "success": True,
+            "duplicate": True
+        })
+    cache.add(event_id)
+    queue.put((text, chat_id))
+    return jsonify({
+        "success": True,
+        "queued": True
+    })
 
 
 @app.post(WEBHOOK_PATH)
