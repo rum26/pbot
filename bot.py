@@ -46,7 +46,7 @@ queue = Queue()
 def send_telegram(text, chat_id):
     try:
         requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            f"https://api.telegram.org/bot{ESB_TOKEN}/sendMessage",
             json={
                 "chat_id": chat_id,
                 "text": text,
