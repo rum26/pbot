@@ -142,7 +142,7 @@ def web_events():
 
     events = reversed(Data["events"])
     headers = ["Дата", "Время", "Оператор", "Событие", "Пластина", "Остаток"]
-    return render_template("events.html", events=events, headers=headers)
+    return render_template("cnc.html", events=events, headers=headers)
 
 
 @app.post(WEBHOOK_PATH)
