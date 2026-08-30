@@ -108,6 +108,11 @@ def get_plates():
     return text_plates
 
 
+@app.route("/")
+def get_my_ip():
+    return render_template("index.html")
+
+
 @app.get("/healthz")
 def healthz():
     return {"ok": True}, 200
