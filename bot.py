@@ -151,13 +151,13 @@ def send():
 def web_events():
     events = reversed(Data["events"])
     storage = Data["storage"]
-    text = 'Остаток: '
+    text = ''
     for i in storage:
         text += f'⌀{i} — {storage[i]} шт. | '
     text = text[:-1]
 
     headers = ["Дата", "Время", "Оператор", "Событие", "Пластина", "Остаток"]
-    return render_template("cnc.html",
+    return render_template("events.html",
                            events=events,
                            headers=headers,
                            storage=text)
