@@ -57,6 +57,10 @@
       font-size: 18px;
     }
 
+    .storage {
+          font-size: 18px;
+    }
+
     .header p {
       margin: 6px 0 0;
       color: var(--muted);
@@ -120,7 +124,11 @@
       <div class="header">
         <h1>Журнал событий</h1>
       </div>
-
+      <table class="storage">
+        <tr>
+          <td style="color: rgb(0, 0, 255);"><b> {{ storage }} </b></td>
+        </tr>
+      </table>
       {% if events %}
       <div class="table-wrap">
         <table>

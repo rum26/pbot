@@ -109,8 +109,13 @@ def get_plates():
 
 
 @app.route("/")
+def get_wm():
+    return render_template("wm.html")
+
+
+@app.route("/ip")
 def get_my_ip():
-    return render_template("index.html")
+    return render_template("myip.html")
 
 
 @app.get("/healthz")
@@ -145,8 +150,17 @@ def send():
 @app.route("/events")
 def web_events():
     events = reversed(Data["events"])
+    storage = Data["storage"]
+    text = 'Остаток: '
+    for i in storage:
+        text += f'⌀{i} — {storage[i]} шт. | '
+    text = text[:-1]
+
     headers = ["Дата", "Время", "Оператор", "Событие", "Пластина", "Остаток"]
-    return render_template("cnc.html", events=events, headers=headers)
+    return render_template("cnc.html",
+                           events=events,
+                           headers=headers,
+                           storage=text)
 
 
 @app.post(WEBHOOK_PATH)

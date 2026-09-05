@@ -1,12 +1,13 @@
-const CACHE = "events-v1";
+const CACHE = "v1";
 
 self.addEventListener("install", event => {
     event.waitUntil(
         caches.open(CACHE).then(cache => cache.addAll([
-            "/events",
-            "/static/events_manifest.json",
-            "/static/events-192x192.png",
-            "/static/events-512x512.png"
+            "/",
+            "/static/wm.html",
+            "/static/wm.json",
+            "/static/web-app-manifest-192x192.png",
+            "/static/web-app-manifest-512x512.png"
         ]))
     );
 });
